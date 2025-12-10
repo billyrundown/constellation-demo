@@ -284,6 +284,7 @@
         function drawLogo() {
             ctx.save();
             ctx.font = `bold ${logo.fontSize}px Arial`;
+            ctx.textAlign = 'left';  // Reset textAlign (may be 'center' from planet labels)
 
             if (logo.active) {
                 // Glow effect only when active
