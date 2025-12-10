@@ -22,18 +22,19 @@
         // Bouncing DVD-style logo
         const logo = {
             text: 'RUNDOWN AI',
-            x: canvas.width / 2,
-            y: canvas.height / 2,
+            x: 0,
+            y: 0,
             vx: 2.25,
             vy: 1.5,
             width: 0,
             height: 0,
             hue: 280,
-            fontSize: 120,
+            fontSize: 90, // 25% smaller (was 120)
             centerX: 0,
             centerY: 0,
             radius: 0,
-            radiusSq: 0
+            radiusSq: 0,
+            active: false // Starts stationary in center, activates on click
         };
 
         // Measure logo dimensions
@@ -41,12 +42,16 @@
         logo.width = ctx.measureText(logo.text).width;
         logo.height = logo.fontSize;
 
-        // Orbiting planet with ring
+        // Center the logo initially
+        logo.x = (canvas.width - logo.width) / 2;
+        logo.y = (canvas.height + logo.height) / 2;
+        logo.centerX = canvas.width / 2;
+        logo.centerY = canvas.height / 2;
+
+        // Orbiting planet with ring (orbits around logo)
         const planet = {
-            centerX: canvas.width / 2,
-            centerY: canvas.height / 2,
-            orbitA: canvas.width * 0.25,  // Semi-major axis (horizontal)
-            orbitB: canvas.height * 0.15, // Semi-minor axis (vertical)
+            orbitA: 200,  // Semi-major axis (horizontal) - fixed size orbit around logo
+            orbitB: 120,  // Semi-minor axis (vertical)
             angle: 0,
             speed: 0.003,  // Slow orbit speed
             radius: 25,
@@ -118,24 +123,26 @@
             particles.push(new Particle());
         }
         
-        // Update bouncing logo
+        // Update bouncing logo (only moves when active)
         function updateLogo() {
-            logo.x += logo.vx;
-            logo.y += logo.vy;
+            if (logo.active) {
+                logo.x += logo.vx;
+                logo.y += logo.vy;
 
-            // Bounce off edges (DVD style)
-            if (logo.x <= 0 || logo.x + logo.width >= canvas.width) {
-                logo.vx *= -1;
-                logo.hue = (logo.hue + 60) % 360; // Change color on bounce
-            }
-            if (logo.y - logo.height <= 0 || logo.y >= canvas.height) {
-                logo.vy *= -1;
-                logo.hue = (logo.hue + 60) % 360; // Change color on bounce
-            }
+                // Bounce off edges (DVD style)
+                if (logo.x <= 0 || logo.x + logo.width >= canvas.width) {
+                    logo.vx *= -1;
+                    logo.hue = (logo.hue + 60) % 360; // Change color on bounce
+                }
+                if (logo.y - logo.height <= 0 || logo.y >= canvas.height) {
+                    logo.vy *= -1;
+                    logo.hue = (logo.hue + 60) % 360; // Change color on bounce
+                }
 
-            // Keep in bounds
-            logo.x = Math.max(0, Math.min(canvas.width - logo.width, logo.x));
-            logo.y = Math.max(logo.height, Math.min(canvas.height, logo.y));
+                // Keep in bounds
+                logo.x = Math.max(0, Math.min(canvas.width - logo.width, logo.x));
+                logo.y = Math.max(logo.height, Math.min(canvas.height, logo.y));
+            }
 
             // Cache center position and radius for particle interaction
             logo.centerX = logo.x + logo.width / 2;
@@ -149,29 +156,31 @@
             ctx.save();
             ctx.font = `bold ${logo.fontSize}px Arial`;
 
-            // Reduced glow effect (75% less)
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = `hsl(${logo.hue}, 100%, 60%)`;
+            if (logo.active) {
+                // Glow effect only when active
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = `hsl(${logo.hue}, 100%, 60%)`;
 
-            // Draw border/stroke first (underneath)
-            ctx.lineWidth = 4;
-            ctx.strokeStyle = `hsl(${(logo.hue + 180) % 360}, 100%, 90%)`;
-            ctx.strokeText(logo.text, logo.x, logo.y);
+                // Draw border/stroke first (underneath)
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = `hsl(${(logo.hue + 180) % 360}, 100%, 90%)`;
+                ctx.strokeText(logo.text, logo.x, logo.y);
+            }
 
-            // White fill (no gradient)
+            // White fill
             ctx.fillStyle = '#ffffff';
             ctx.fillText(logo.text, logo.x, logo.y);
             ctx.restore();
         }
 
-        // Update orbiting planet
+        // Update orbiting planet (orbits around logo)
         function updatePlanet() {
             planet.angle += planet.speed;
             if (planet.angle > Math.PI * 2) planet.angle -= Math.PI * 2;
 
-            // Elliptical orbit calculation
-            planet.x = planet.centerX + Math.cos(planet.angle) * planet.orbitA;
-            planet.y = planet.centerY + Math.sin(planet.angle) * planet.orbitB;
+            // Elliptical orbit around logo's center
+            planet.x = logo.centerX + Math.cos(planet.angle) * planet.orbitA;
+            planet.y = logo.centerY + Math.sin(planet.angle) * planet.orbitB;
         }
 
         // Draw planet with ring and label
@@ -285,7 +294,22 @@
             mouse.x = e.x;
             mouse.y = e.y;
         });
-        
+
+        // Click/tap handler to activate logo DVD mode
+        function handleClick(e) {
+            const clickX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clickY = e.clientY || (e.touches && e.touches[0].clientY);
+
+            // Check if click is on the logo
+            if (clickX >= logo.x && clickX <= logo.x + logo.width &&
+                clickY >= logo.y - logo.height && clickY <= logo.y) {
+                logo.active = true;
+            }
+        }
+
+        canvas.addEventListener('click', handleClick);
+        canvas.addEventListener('touchstart', handleClick);
+
         animate();
     </script>
 </body>
