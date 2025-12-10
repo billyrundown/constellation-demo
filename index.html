@@ -40,6 +40,21 @@
         ctx.font = `bold ${logo.fontSize}px Arial`;
         logo.width = ctx.measureText(logo.text).width;
         logo.height = logo.fontSize;
+
+        // Orbiting planet with ring
+        const planet = {
+            centerX: canvas.width / 2,
+            centerY: canvas.height / 2,
+            orbitA: canvas.width * 0.25,  // Semi-major axis (horizontal)
+            orbitB: canvas.height * 0.15, // Semi-minor axis (vertical)
+            angle: 0,
+            speed: 0.003,  // Slow orbit speed
+            radius: 25,
+            ringInnerRadius: 35,
+            ringOuterRadius: 55,
+            x: 0,
+            y: 0
+        };
         
         class Particle {
             constructor() {
@@ -149,6 +164,72 @@
             ctx.restore();
         }
 
+        // Update orbiting planet
+        function updatePlanet() {
+            planet.angle += planet.speed;
+            if (planet.angle > Math.PI * 2) planet.angle -= Math.PI * 2;
+
+            // Elliptical orbit calculation
+            planet.x = planet.centerX + Math.cos(planet.angle) * planet.orbitA;
+            planet.y = planet.centerY + Math.sin(planet.angle) * planet.orbitB;
+        }
+
+        // Draw planet with ring and label
+        function drawPlanet() {
+            ctx.save();
+
+            // Draw ring (behind planet when in front half of orbit)
+            const ringTilt = 0.3; // Tilt of the ring
+
+            // Draw back half of ring first
+            ctx.beginPath();
+            ctx.ellipse(planet.x, planet.y, planet.ringOuterRadius, planet.ringOuterRadius * ringTilt, 0, Math.PI, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(180, 180, 200, 0.6)';
+            ctx.lineWidth = 8;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.ellipse(planet.x, planet.y, planet.ringInnerRadius, planet.ringInnerRadius * ringTilt, 0, Math.PI, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(200, 200, 220, 0.4)';
+            ctx.lineWidth = 6;
+            ctx.stroke();
+
+            // Draw planet body
+            const gradient = ctx.createRadialGradient(
+                planet.x - planet.radius * 0.3, planet.y - planet.radius * 0.3, 0,
+                planet.x, planet.y, planet.radius
+            );
+            gradient.addColorStop(0, '#6699cc');
+            gradient.addColorStop(0.5, '#445588');
+            gradient.addColorStop(1, '#223355');
+
+            ctx.beginPath();
+            ctx.arc(planet.x, planet.y, planet.radius, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            // Draw front half of ring (in front of planet)
+            ctx.beginPath();
+            ctx.ellipse(planet.x, planet.y, planet.ringOuterRadius, planet.ringOuterRadius * ringTilt, 0, 0, Math.PI);
+            ctx.strokeStyle = 'rgba(180, 180, 200, 0.7)';
+            ctx.lineWidth = 8;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.ellipse(planet.x, planet.y, planet.ringInnerRadius, planet.ringInnerRadius * ringTilt, 0, 0, Math.PI);
+            ctx.strokeStyle = 'rgba(200, 200, 220, 0.5)';
+            ctx.lineWidth = 6;
+            ctx.stroke();
+
+            // Draw "AI University" label
+            ctx.font = '14px Arial';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.fillText('AI University', planet.x, planet.y + planet.ringOuterRadius + 20);
+
+            ctx.restore();
+        }
+
         // Connect nearby particles
         const CONNECTION_DIST = 120;
         const CONNECTION_DIST_SQ = CONNECTION_DIST * CONNECTION_DIST;
@@ -186,6 +267,10 @@
             // Update and draw bouncing logo
             updateLogo();
             drawLogo();
+
+            // Update and draw orbiting planet
+            updatePlanet();
+            drawPlanet();
 
             particles.forEach(p => {
                 p.update();
