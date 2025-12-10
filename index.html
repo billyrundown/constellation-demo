@@ -58,7 +58,7 @@
                 orbitA: Math.max(220, logoSafeRadius + 60),  // Horizontal orbit radius
                 orbitB: Math.max(140, logoSafeRadius + 20),  // Vertical orbit radius
                 angle: 0,  // Starting angle
-                speed: 0.003,  // Orbit speed
+                speed: 0.0018,  // Orbit speed (reduced 40%)
                 radius: 25,
                 hasRing: true,
                 ringInnerRadius: 35,
@@ -72,7 +72,7 @@
                 orbitA: Math.max(160, logoSafeRadius + 30),  // Smaller orbit
                 orbitB: Math.max(100, logoSafeRadius),
                 angle: Math.PI * 0.7,  // Offset starting position
-                speed: 0.0045,  // Slightly faster
+                speed: 0.0027,  // Slightly faster (reduced 40%)
                 radius: 15,  // Smaller planet
                 hasRing: false,
                 color: { light: '#cc9966', mid: '#886644', dark: '#553322' },
@@ -80,7 +80,116 @@
                 y: 0
             }
         ];
-        
+
+        // Asteroid system - small chance of spawning
+        const asteroids = [];
+        const ASTEROID_SPAWN_CHANCE = 0.001; // 0.1% chance per frame
+        const ASTEROID_GROUP_SIZE_MIN = 2;
+        const ASTEROID_GROUP_SIZE_MAX = 5;
+
+        function spawnAsteroidGroup() {
+            const groupSize = Math.floor(Math.random() * (ASTEROID_GROUP_SIZE_MAX - ASTEROID_GROUP_SIZE_MIN + 1)) + ASTEROID_GROUP_SIZE_MIN;
+
+            // Random entry edge (0=top, 1=right, 2=bottom, 3=left)
+            const edge = Math.floor(Math.random() * 4);
+            let baseX, baseY, vx, vy;
+            const speed = 2 + Math.random() * 2;
+
+            switch(edge) {
+                case 0: // Top
+                    baseX = Math.random() * canvas.width;
+                    baseY = -30;
+                    vx = (Math.random() - 0.5) * 2;
+                    vy = speed;
+                    break;
+                case 1: // Right
+                    baseX = canvas.width + 30;
+                    baseY = Math.random() * canvas.height;
+                    vx = -speed;
+                    vy = (Math.random() - 0.5) * 2;
+                    break;
+                case 2: // Bottom
+                    baseX = Math.random() * canvas.width;
+                    baseY = canvas.height + 30;
+                    vx = (Math.random() - 0.5) * 2;
+                    vy = -speed;
+                    break;
+                default: // Left
+                    baseX = -30;
+                    baseY = Math.random() * canvas.height;
+                    vx = speed;
+                    vy = (Math.random() - 0.5) * 2;
+            }
+
+            // Spawn group of asteroids close together
+            for (let i = 0; i < groupSize; i++) {
+                asteroids.push({
+                    x: baseX + (Math.random() - 0.5) * 40,
+                    y: baseY + (Math.random() - 0.5) * 40,
+                    vx: vx + (Math.random() - 0.5) * 0.5,
+                    vy: vy + (Math.random() - 0.5) * 0.5,
+                    radius: 3 + Math.random() * 5,
+                    rotation: Math.random() * Math.PI * 2,
+                    rotationSpeed: (Math.random() - 0.5) * 0.1,
+                    vertices: 5 + Math.floor(Math.random() * 4), // 5-8 vertices
+                    roughness: [] // Random offsets for jagged look
+                });
+                // Generate roughness for jagged asteroid shape
+                const ast = asteroids[asteroids.length - 1];
+                for (let v = 0; v < ast.vertices; v++) {
+                    ast.roughness.push(0.7 + Math.random() * 0.6);
+                }
+            }
+        }
+
+        function updateAsteroids() {
+            // Small chance to spawn new asteroid group
+            if (Math.random() < ASTEROID_SPAWN_CHANCE && asteroids.length < 20) {
+                spawnAsteroidGroup();
+            }
+
+            // Update positions and remove off-screen asteroids
+            for (let i = asteroids.length - 1; i >= 0; i--) {
+                const ast = asteroids[i];
+                ast.x += ast.vx;
+                ast.y += ast.vy;
+                ast.rotation += ast.rotationSpeed;
+
+                // Remove if off screen (with margin)
+                if (ast.x < -50 || ast.x > canvas.width + 50 ||
+                    ast.y < -50 || ast.y > canvas.height + 50) {
+                    asteroids.splice(i, 1);
+                }
+            }
+        }
+
+        function drawAsteroids() {
+            ctx.fillStyle = '#888888';
+            ctx.strokeStyle = '#666666';
+            ctx.lineWidth = 1;
+
+            for (const ast of asteroids) {
+                ctx.save();
+                ctx.translate(ast.x, ast.y);
+                ctx.rotate(ast.rotation);
+
+                ctx.beginPath();
+                for (let i = 0; i < ast.vertices; i++) {
+                    const angle = (i / ast.vertices) * Math.PI * 2;
+                    const r = ast.radius * ast.roughness[i];
+                    const x = Math.cos(angle) * r;
+                    const y = Math.sin(angle) * r;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
         class Particle {
             constructor() {
                 this.x = Math.random() * canvas.width;
@@ -205,12 +314,19 @@
             }
         }
 
-        // Draw all planets
+        // Draw all planets (with reduced motion blur)
         function drawPlanets() {
             const ringTilt = 0.3;
 
             for (const planet of planets) {
                 ctx.save();
+
+                // Reduce motion blur on planets by 50% - apply extra dark overlay in planet area
+                const clearRadius = planet.hasRing ? planet.ringOuterRadius + 10 : planet.radius + 10;
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                ctx.beginPath();
+                ctx.arc(planet.x, planet.y, clearRadius, 0, Math.PI * 2);
+                ctx.fill();
 
                 // Draw back half of ring first (if has ring)
                 if (planet.hasRing) {
@@ -256,14 +372,29 @@
                     ctx.stroke();
                 }
 
-                // Draw label below planet
-                ctx.font = '14px Arial';
-                ctx.fillStyle = '#ffffff';
-                ctx.textAlign = 'center';
-                const labelOffset = planet.hasRing ? planet.ringOuterRadius + 20 : planet.radius + 15;
-                ctx.fillText(planet.name, planet.x, planet.y + labelOffset);
-
                 ctx.restore();
+            }
+        }
+
+        // Draw planet labels (no motion blur - called separately)
+        function drawPlanetLabels() {
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+
+            for (const planet of planets) {
+                const labelOffset = planet.hasRing ? planet.ringOuterRadius + 20 : planet.radius + 15;
+                const labelY = planet.y + labelOffset;
+
+                // Measure text width for clear area
+                const textWidth = ctx.measureText(planet.name).width;
+
+                // Clear rectangle behind label to remove motion blur completely
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(planet.x - textWidth / 2 - 4, labelY - 12, textWidth + 8, 16);
+
+                // Draw label
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(planet.name, planet.x, labelY);
             }
         }
 
@@ -309,12 +440,20 @@
             updatePlanets();
             drawPlanets();
 
+            // Update and draw asteroids
+            updateAsteroids();
+            drawAsteroids();
+
             particles.forEach(p => {
                 p.update();
                 p.draw();
             });
 
             connectParticles();
+
+            // Draw planet labels last (no motion blur)
+            drawPlanetLabels();
+
             requestAnimationFrame(animate);
         }
         
