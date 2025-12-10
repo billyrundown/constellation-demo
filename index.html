@@ -24,8 +24,8 @@
             text: 'RUNDOWN AI',
             x: canvas.width / 2,
             y: canvas.height / 2,
-            vx: 1.5,
-            vy: 1,
+            vx: 2.25,
+            vy: 1.5,
             width: 0,
             height: 0,
             hue: 280,
@@ -81,7 +81,7 @@
                 if (ldistSq < logo.radiusSq && ldistSq > 0) {
                     // Only calculate sqrt when we need it
                     const ldist = Math.sqrt(ldistSq);
-                    const force = (logo.radius - ldist) / logo.radius * 0.15;
+                    const force = (logo.radius - ldist) / logo.radius * 0.02;
                     this.vx += (ldx / ldist) * force;
                     this.vy += (ldy / ldist) * force;
                 }
@@ -91,14 +91,10 @@
             }
             
             draw() {
-                ctx.save();
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = `hsl(${this.hue}, 100%, 70%)`;
                 ctx.fillStyle = `hsl(${this.hue}, 100%, 70%)`;
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.restore();
             }
         }
         
@@ -138,8 +134,8 @@
             ctx.save();
             ctx.font = `bold ${logo.fontSize}px Arial`;
 
-            // Glow effect
-            ctx.shadowBlur = 40;
+            // Reduced glow effect (75% less)
+            ctx.shadowBlur = 10;
             ctx.shadowColor = `hsl(${logo.hue}, 100%, 60%)`;
 
             // Draw border/stroke first (underneath)
@@ -147,13 +143,8 @@
             ctx.strokeStyle = `hsl(${(logo.hue + 180) % 360}, 100%, 90%)`;
             ctx.strokeText(logo.text, logo.x, logo.y);
 
-            // Gradient fill on top
-            const gradient = ctx.createLinearGradient(logo.x, logo.y - logo.height, logo.x + logo.width, logo.y);
-            gradient.addColorStop(0, `hsl(${logo.hue}, 100%, 70%)`);
-            gradient.addColorStop(0.5, `hsl(${(logo.hue + 40) % 360}, 100%, 70%)`);
-            gradient.addColorStop(1, `hsl(${(logo.hue + 80) % 360}, 100%, 70%)`);
-
-            ctx.fillStyle = gradient;
+            // White fill (no gradient)
+            ctx.fillStyle = '#ffffff';
             ctx.fillText(logo.text, logo.x, logo.y);
             ctx.restore();
         }
@@ -163,8 +154,6 @@
         const CONNECTION_DIST_SQ = CONNECTION_DIST * CONNECTION_DIST;
 
         function connectParticles() {
-            ctx.save();
-            ctx.shadowBlur = 10;
             ctx.lineWidth = 1.5;
 
             for (let i = 0; i < particles.length; i++) {
@@ -181,7 +170,6 @@
                         const alpha = 1 - dist / CONNECTION_DIST;
                         const avgHue = (p1.hue + p2.hue) * 0.5;
                         ctx.strokeStyle = `hsla(${avgHue}, 100%, 70%, ${alpha})`;
-                        ctx.shadowColor = `hsl(${avgHue}, 100%, 70%)`;
                         ctx.beginPath();
                         ctx.moveTo(p1.x, p1.y);
                         ctx.lineTo(p2.x, p2.y);
@@ -189,7 +177,6 @@
                     }
                 }
             }
-            ctx.restore();
         }
         
         function animate() {
