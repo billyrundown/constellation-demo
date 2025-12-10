@@ -81,6 +81,149 @@
             }
         ];
 
+        // Floating spaceship
+        const spaceship = {
+            x: canvas.width * 0.3,
+            y: canvas.height * 0.3,
+            vx: 0.5,
+            vy: 0.3,
+            rotation: 0,
+            targetRotation: 0,
+            size: 25,
+            bobOffset: 0,
+            bobSpeed: 0.03,
+            thrusterFlicker: 0,
+            hue: 200  // Blue-ish color
+        };
+
+        function updateSpaceship() {
+            // Gentle floating motion with some randomness
+            spaceship.bobOffset += spaceship.bobSpeed;
+
+            // Add slight drift to velocity occasionally
+            if (Math.random() < 0.02) {
+                spaceship.vx += (Math.random() - 0.5) * 0.2;
+                spaceship.vy += (Math.random() - 0.5) * 0.2;
+            }
+
+            // Clamp velocity
+            const maxSpeed = 1.5;
+            spaceship.vx = Math.max(-maxSpeed, Math.min(maxSpeed, spaceship.vx));
+            spaceship.vy = Math.max(-maxSpeed, Math.min(maxSpeed, spaceship.vy));
+
+            // Update position with bobbing effect
+            spaceship.x += spaceship.vx;
+            spaceship.y += spaceship.vy + Math.sin(spaceship.bobOffset) * 0.3;
+
+            // Bounce off edges with some padding
+            const padding = 50;
+            if (spaceship.x < padding) {
+                spaceship.x = padding;
+                spaceship.vx *= -1;
+            }
+            if (spaceship.x > canvas.width - padding) {
+                spaceship.x = canvas.width - padding;
+                spaceship.vx *= -1;
+            }
+            if (spaceship.y < padding) {
+                spaceship.y = padding;
+                spaceship.vy *= -1;
+            }
+            if (spaceship.y > canvas.height - padding) {
+                spaceship.y = canvas.height - padding;
+                spaceship.vy *= -1;
+            }
+
+            // Rotate towards movement direction
+            spaceship.targetRotation = Math.atan2(spaceship.vy, spaceship.vx);
+
+            // Smooth rotation interpolation
+            let rotDiff = spaceship.targetRotation - spaceship.rotation;
+            while (rotDiff > Math.PI) rotDiff -= Math.PI * 2;
+            while (rotDiff < -Math.PI) rotDiff += Math.PI * 2;
+            spaceship.rotation += rotDiff * 0.05;
+
+            // Thruster flicker effect
+            spaceship.thrusterFlicker = 0.7 + Math.random() * 0.3;
+        }
+
+        function drawSpaceship() {
+            ctx.save();
+            ctx.translate(spaceship.x, spaceship.y);
+            ctx.rotate(spaceship.rotation);
+
+            const s = spaceship.size;
+
+            // Draw thruster glow
+            const thrusterGradient = ctx.createRadialGradient(-s * 0.8, 0, 0, -s * 0.8, 0, s * 0.6);
+            thrusterGradient.addColorStop(0, `rgba(255, 150, 50, ${0.8 * spaceship.thrusterFlicker})`);
+            thrusterGradient.addColorStop(0.3, `rgba(255, 100, 30, ${0.5 * spaceship.thrusterFlicker})`);
+            thrusterGradient.addColorStop(1, 'rgba(255, 50, 0, 0)');
+            ctx.fillStyle = thrusterGradient;
+            ctx.beginPath();
+            ctx.ellipse(-s * 0.8, 0, s * 0.6 * spaceship.thrusterFlicker, s * 0.3, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Main body (fuselage)
+            const bodyGradient = ctx.createLinearGradient(-s * 0.5, -s * 0.3, -s * 0.5, s * 0.3);
+            bodyGradient.addColorStop(0, '#99aacc');
+            bodyGradient.addColorStop(0.5, '#667799');
+            bodyGradient.addColorStop(1, '#445566');
+            ctx.fillStyle = bodyGradient;
+
+            ctx.beginPath();
+            ctx.moveTo(s, 0);  // Nose
+            ctx.lineTo(s * 0.3, -s * 0.15);
+            ctx.lineTo(-s * 0.5, -s * 0.2);
+            ctx.lineTo(-s * 0.6, 0);
+            ctx.lineTo(-s * 0.5, s * 0.2);
+            ctx.lineTo(s * 0.3, s * 0.15);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#334455';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // Cockpit window
+            const cockpitGradient = ctx.createRadialGradient(s * 0.4, -s * 0.05, 0, s * 0.4, 0, s * 0.2);
+            cockpitGradient.addColorStop(0, '#aaddff');
+            cockpitGradient.addColorStop(0.7, '#66aadd');
+            cockpitGradient.addColorStop(1, '#3388bb');
+            ctx.fillStyle = cockpitGradient;
+            ctx.beginPath();
+            ctx.ellipse(s * 0.4, 0, s * 0.15, s * 0.08, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Top wing
+            ctx.fillStyle = '#556677';
+            ctx.beginPath();
+            ctx.moveTo(-s * 0.1, -s * 0.15);
+            ctx.lineTo(-s * 0.4, -s * 0.5);
+            ctx.lineTo(-s * 0.6, -s * 0.45);
+            ctx.lineTo(-s * 0.5, -s * 0.2);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Bottom wing
+            ctx.beginPath();
+            ctx.moveTo(-s * 0.1, s * 0.15);
+            ctx.lineTo(-s * 0.4, s * 0.5);
+            ctx.lineTo(-s * 0.6, s * 0.45);
+            ctx.lineTo(-s * 0.5, s * 0.2);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Engine detail
+            ctx.fillStyle = '#334455';
+            ctx.beginPath();
+            ctx.ellipse(-s * 0.55, 0, s * 0.08, s * 0.12, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
         // Asteroid system - small chance of spawning
         const asteroids = [];
         const ASTEROID_SPAWN_CHANCE = 0.001; // 0.1% chance per frame
@@ -444,6 +587,10 @@
             // Update and draw asteroids
             updateAsteroids();
             drawAsteroids();
+
+            // Update and draw floating spaceship
+            updateSpaceship();
+            drawSpaceship();
 
             particles.forEach(p => {
                 p.update();
