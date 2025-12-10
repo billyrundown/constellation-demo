@@ -18,6 +18,24 @@
         const particles = [];
         const particleCount = 100;
         const mouse = { x: null, y: null };
+
+        // Bouncing DVD-style logo
+        const logo = {
+            text: 'RUNDOWN AI',
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            vx: 1.5,
+            vy: 1,
+            width: 0,
+            height: 0,
+            hue: 280,
+            fontSize: 60
+        };
+
+        // Measure logo dimensions
+        ctx.font = `bold ${logo.fontSize}px Arial`;
+        logo.width = ctx.measureText(logo.text).width;
+        logo.height = logo.fontSize;
         
         class Particle {
             constructor() {
@@ -49,7 +67,22 @@
                         this.vy += dy * 0.0001;
                     }
                 }
-                
+
+                // Logo interaction - push particles away as logo moves through
+                const logoCenterX = logo.x + logo.width / 2;
+                const logoCenterY = logo.y - logo.height / 2;
+                const ldx = this.x - logoCenterX;
+                const ldy = this.y - logoCenterY;
+                const ldist = Math.sqrt(ldx * ldx + ldy * ldy);
+                const logoRadius = Math.max(logo.width, logo.height) * 0.6;
+
+                if (ldist < logoRadius && ldist > 0) {
+                    // Push particles away from logo center
+                    const force = (logoRadius - ldist) / logoRadius * 0.15;
+                    this.vx += (ldx / ldist) * force;
+                    this.vy += (ldy / ldist) * force;
+                }
+
                 this.x += this.vx;
                 this.y += this.vy;
             }
@@ -71,6 +104,46 @@
             particles.push(new Particle());
         }
         
+        // Update bouncing logo
+        function updateLogo() {
+            logo.x += logo.vx;
+            logo.y += logo.vy;
+
+            // Bounce off edges (DVD style)
+            if (logo.x <= 0 || logo.x + logo.width >= canvas.width) {
+                logo.vx *= -1;
+                logo.hue = (logo.hue + 60) % 360; // Change color on bounce
+            }
+            if (logo.y - logo.height <= 0 || logo.y >= canvas.height) {
+                logo.vy *= -1;
+                logo.hue = (logo.hue + 60) % 360; // Change color on bounce
+            }
+
+            // Keep in bounds
+            logo.x = Math.max(0, Math.min(canvas.width - logo.width, logo.x));
+            logo.y = Math.max(logo.height, Math.min(canvas.height, logo.y));
+        }
+
+        // Draw bouncing logo
+        function drawLogo() {
+            ctx.save();
+            ctx.font = `bold ${logo.fontSize}px Arial`;
+
+            // Glow effect
+            ctx.shadowBlur = 30;
+            ctx.shadowColor = `hsl(${logo.hue}, 100%, 60%)`;
+
+            // Gradient fill
+            const gradient = ctx.createLinearGradient(logo.x, logo.y - logo.height, logo.x + logo.width, logo.y);
+            gradient.addColorStop(0, `hsl(${logo.hue}, 100%, 70%)`);
+            gradient.addColorStop(0.5, `hsl(${(logo.hue + 40) % 360}, 100%, 70%)`);
+            gradient.addColorStop(1, `hsl(${(logo.hue + 80) % 360}, 100%, 70%)`);
+
+            ctx.fillStyle = gradient;
+            ctx.fillText(logo.text, logo.x, logo.y);
+            ctx.restore();
+        }
+
         // Connect nearby particles
         function connectParticles() {
             ctx.save();
@@ -101,12 +174,16 @@
         function animate() {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
+
+            // Update and draw bouncing logo
+            updateLogo();
+            drawLogo();
+
             particles.forEach(p => {
                 p.update();
                 p.draw();
             });
-            
+
             connectParticles();
             requestAnimationFrame(animate);
         }
