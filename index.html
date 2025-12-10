@@ -29,12 +29,12 @@
             }
             
             update() {
-                // INTENTIONAL BUG: boundary logic is wrong
+                // Bounce off boundaries
                 if (this.x > canvas.width || this.x < 0) {
-                    this.vx = this.vx; // Should be *= -1
+                    this.vx *= -1;
                 }
                 if (this.y > canvas.height || this.y < 0) {
-                    this.vy = this.vy; // Should be *= -1
+                    this.vy *= -1;
                 }
                 
                 // Mouse attraction
