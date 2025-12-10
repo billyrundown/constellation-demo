@@ -23,9 +23,11 @@
             constructor() {
                 this.x = Math.random() * canvas.width;
                 this.y = Math.random() * canvas.height;
-                this.vx = (Math.random() - 0.5) * 2;
-                this.vy = (Math.random() - 0.5) * 2;
+                this.vx = (Math.random() - 0.5) * 1;
+                this.vy = (Math.random() - 0.5) * 1;
                 this.radius = Math.random() * 2 + 1;
+                // Random hue between pink (330) and purple (280)
+                this.hue = 280 + Math.random() * 50;
             }
             
             update() {
@@ -53,10 +55,14 @@
             }
             
             draw() {
-                ctx.fillStyle = '#fff';
+                ctx.save();
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = `hsl(${this.hue}, 100%, 70%)`;
+                ctx.fillStyle = `hsl(${this.hue}, 100%, 70%)`;
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
                 ctx.fill();
+                ctx.restore();
             }
         }
         
@@ -67,15 +73,21 @@
         
         // Connect nearby particles
         function connectParticles() {
+            ctx.save();
+            ctx.shadowBlur = 10;
             for (let i = 0; i < particles.length; i++) {
                 for (let j = i + 1; j < particles.length; j++) {
                     const dx = particles[i].x - particles[j].x;
                     const dy = particles[i].y - particles[j].y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
-                    
+
                     if (dist < 120) {
-                        ctx.strokeStyle = `rgba(100, 149, 237, ${1 - dist / 120})`;
-                        ctx.lineWidth = 1;
+                        const alpha = 1 - dist / 120;
+                        // Blend between the two particle hues for gradient effect
+                        const avgHue = (particles[i].hue + particles[j].hue) / 2;
+                        ctx.strokeStyle = `hsla(${avgHue}, 100%, 70%, ${alpha})`;
+                        ctx.shadowColor = `hsl(${avgHue}, 100%, 70%)`;
+                        ctx.lineWidth = 1.5;
                         ctx.beginPath();
                         ctx.moveTo(particles[i].x, particles[i].y);
                         ctx.lineTo(particles[j].x, particles[j].y);
@@ -83,6 +95,7 @@
                     }
                 }
             }
+            ctx.restore();
         }
         
         function animate() {
